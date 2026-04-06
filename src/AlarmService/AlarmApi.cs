@@ -15,7 +15,7 @@ public static class AlarmApi
             {
                 var cmd = AlarmCommand.Ack(siteId, assetId, alarmId, body.UserId ?? "unknown", body.Comment);
                 await bus.EnqueueAsync(cmd);
-                return Results.Accepted($"/api/commands/{{cmd.CommandId}}", new {{ commandId = cmd.CommandId }});
+                return Results.Accepted($"/api/commands/{cmd.CommandId}", new { commandId = cmd.CommandId });
             });
 
         app.MapPost("/api/alarms/{siteId}/{assetId}/{alarmId}/shelve",
@@ -24,7 +24,7 @@ public static class AlarmApi
                 var until = body.ShelveUntil ?? DateTimeOffset.UtcNow.Add(body.Duration ?? TimeSpan.FromHours(2));
                 var cmd = AlarmCommand.Shelve(siteId, assetId, alarmId, body.UserId ?? "unknown", until, body.Comment);
                 await bus.EnqueueAsync(cmd);
-                return Results.Accepted($"/api/commands/{{cmd.CommandId}}", new {{ commandId = cmd.CommandId, shelveUntil = until }});
+                return Results.Accepted($"/api/commands/{cmd.CommandId}", new { commandId = cmd.CommandId, shelveUntil = until });
             });
 
         app.MapPost("/api/alarms/{siteId}/{assetId}/{alarmId}/unshelve",
@@ -32,7 +32,7 @@ public static class AlarmApi
             {
                 var cmd = AlarmCommand.Unshelve(siteId, assetId, alarmId, body.UserId ?? "unknown", body.Comment);
                 await bus.EnqueueAsync(cmd);
-                return Results.Accepted($"/api/commands/{{cmd.CommandId}}", new {{ commandId = cmd.CommandId }});
+                return Results.Accepted($"/api/commands/{cmd.CommandId}", new { commandId = cmd.CommandId });
             });
     }
 

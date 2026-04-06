@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Azure.Messaging.EventHubs;
 using Azure.Messaging.EventHubs.Processor;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;

@@ -1,1 +1,38 @@
-using Microsoft.Extensions.Hosting.WindowsServices;\n\n// Call the Windows service host builder.\nbuilder.Host.UseWindowsService(options => options.ServiceName = "TUI SCADA OPC UA Forwarder");\n\n// Add services and endpoints.\nbuilder.Services.AddEndpointsApiExplorer();\nbuilder.Services.AddSwaggerGen();\n\n// Enable Swagger UI in Development.\nif (env.IsDevelopment()) {\n    app.UseSwagger();\n    app.UseSwaggerUI();\n} \n\n// Map health check endpoints.\napp.MapGet("/health", () => new { status = "ok" });\napp.MapGet("/ready", () => new { status = "ready" });\n\n// Keep existing registrations.\n// Existing Redis, BlobContainerClient, ServiceBusClient, ICommandBus, AlarmStateStore, hosted services registrations.\n// Ensure app.MapAlarmEndpoints() remains intact.\napp.MapAlarmEndpoints();\n\n// Run the application.\napp.Run();
+using Azure.Messaging.ServiceBus;
+using StackExchange.Redis;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Redis
+builder.Services.AddSingleton<IConnectionMultiplexer>(_ =>
+    ConnectionMultiplexer.Connect(Env("REDIS_CONNECTION_STRING")));
+builder.Services.AddSingleton(sp => sp.GetRequiredService<IConnectionMultiplexer>().GetDatabase());
+
+// Storage for checkpoints
+builder.Services.AddSingleton(_ =>
+    new Azure.Storage.Blobs.BlobContainerClient(
+        Env("BLOB_STORAGE_CONNECTION_STRING"),
+        Env("BLOB_CONTAINER_NAME")));
+
+// Service Bus
+builder.Services.AddSingleton(_ => new ServiceBusClient(Env("SERVICEBUS_CONNECTION_STRING")));
+builder.Services.AddSingleton<ICommandBus>(sp =>
+    new ServiceBusCommandBus(
+        sp.GetRequiredService<ServiceBusClient>(),
+        Env("SERVICEBUS_COMMAND_QUEUE"))); // alarm-commands
+
+// Alarm store
+builder.Services.AddSingleton<AlarmStateStore>();
+
+// Background processors
+builder.Services.AddHostedService<TelemetryProcessorHostedService>();
+builder.Services.AddHostedService<CommandProcessorHostedService>();
+
+var app = builder.Build();
+
+app.MapAlarmEndpoints();
+
+app.Run();
+
+static string Env(string key) =>
+    Environment.GetEnvironmentVariable(key) ?? throw new InvalidOperationException($"Missing env var: {key}");
