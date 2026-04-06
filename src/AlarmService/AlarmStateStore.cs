@@ -28,7 +28,7 @@ public sealed class AlarmStateStore
         var items = new List<AlarmSummary>(keys.Length);
         foreach (var key in keys)
         {
-            var h = await _db.HashGetAllAsync(key!);
+            var h = await _db.HashGetAllAsync((string)key!);
             items.Add(AlarmSummary.FromHash((string)key!, h));
         }
 
